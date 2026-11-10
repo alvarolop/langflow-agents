@@ -1,0 +1,42 @@
+# Helm values for the `langflow-ide` chart on OpenShift.
+#   helm repo add langflow https://langflow-ai.github.io/langflow-helm-charts
+#   helm install langflow-agents langflow/langflow-ide -f deploy/openshift/values.yaml
+#
+# Env secrets come from Secret `langflow-agents-env` (created from .env, see README).
+# The chart is split: backend (StatefulSet + SQLite PVC) and frontend (Deployment).
+# On OpenShift the chart grants its ServiceAccount the nonroot-v2/anyuid SCC
+# (needs cluster-admin to install), so the chart's default securityContext is kept.
+langflow:
+  backend:
+    image:
+      tag: "1.13.1"
+    # `env` replaces the chart's default list, so its three defaults are repeated here
+    env:
+      - name: LANGFLOW_PORT
+        value: "7860"
+      - name: LANGFLOW_ALEMBIC_LOG_FILE
+        value: "/app/db/alembic.log"
+      - name: LANGFLOW_UPDATE_STARTER_PROJECTS
+        value: "false"
+      - name: DO_NOT_TRACK
+        value: "true"
+      - name: LANGFLOW_AUTO_LOGIN
+        value: "false"
+      - name: LANGFLOW_SUPERUSER
+        valueFrom:
+          secretKeyRef: {name: langflow-agents-env, key: LANGFLOW_SUPERUSER}
+      - name: LANGFLOW_SUPERUSER_PASSWORD
+        valueFrom:
+          secretKeyRef: {name: langflow-agents-env, key: LANGFLOW_SUPERUSER_PASSWORD}
+      - name: LANGFLOW_SECRET_KEY
+        valueFrom:
+          secretKeyRef: {name: langflow-agents-env, key: LANGFLOW_SECRET_KEY}
+      # Gemini key, exposed to flows as global variable GOOGLE_API_KEY
+      - name: GOOGLE_API_KEY
+        valueFrom:
+          secretKeyRef: {name: langflow-agents-env, key: GEMINI_API_KEY}
+      - name: LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT
+        value: "GOOGLE_API_KEY"
+  frontend:
+    image:
+      tag: "1.13.1"
