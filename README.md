@@ -41,4 +41,4 @@ oc expose svc/<frontend-service>    # create the Route
 > Untested on a cluster yet. The values render correctly with `helm template`. Flows in `flows/` are not auto-loaded here: import them from the UI.
 
 ## License
-MIT
+[MIT](LICENSE)
