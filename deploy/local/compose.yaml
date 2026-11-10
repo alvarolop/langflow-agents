@@ -1,0 +1,41 @@
+# ==============================================================================
+# Langflow local setup (official image)
+#
+# Secrets live in .env only. Start from the repo root with:
+#   podman-compose -f deploy/local/compose.yaml --env-file .env up
+# ==============================================================================
+
+name: langflow
+
+services:
+  langflow:
+    image: docker.io/langflowai/langflow:1.13.1
+    container_name: langflow
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    environment:
+      # Login (image default is AUTO_LOGIN=false)
+      - LANGFLOW_SUPERUSER=${LANGFLOW_SUPERUSER:-admin@example.org}
+      - LANGFLOW_SUPERUSER_PASSWORD=${LANGFLOW_SUPERUSER_PASSWORD:-admin}
+
+      # Persistence: config and SQLite DB live in the volume
+      - LANGFLOW_CONFIG_DIR=/app/langflow
+      - LANGFLOW_DATABASE_URL=sqlite:////app/langflow/langflow.db
+
+      # Flows-as-code: JSON files in ./flows are loaded at startup
+      - LANGFLOW_LOAD_FLOWS_PATH=/app/flows
+
+      # Gemini key, exposed to flows as global variable GOOGLE_API_KEY
+      - GOOGLE_API_KEY=${GEMINI_API_KEY}
+      - LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=GOOGLE_API_KEY
+
+      # No telemetry
+      - DO_NOT_TRACK=true
+    volumes:
+      - langflow_data:/app/langflow
+      - ../../flows:/app/flows:ro,z
+
+volumes:
+  langflow_data:
+    name: langflow_data
