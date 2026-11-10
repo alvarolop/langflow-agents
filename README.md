@@ -14,11 +14,14 @@ podman-compose -f deploy/local/compose.yaml --env-file .env up
 - User: `admin@example.org` / Password: `admin` (override in `.env`)
 - `GEMINI_API_KEY` is available in flows as the global variable `GOOGLE_API_KEY`.
 
-Stop / recreate:
+Stop (the container stays, stopped, visible in Podman Desktop) and start again:
 
 ```bash
-podman-compose -f deploy/local/compose.yaml --env-file .env down
+podman-compose -f deploy/local/compose.yaml --env-file .env stop
+podman-compose -f deploy/local/compose.yaml --env-file .env start
 ```
+
+Ctrl+C on a foreground `up` does the same as `stop`. Avoid `down`: it removes the container. Data survives either way (named volume `langflow_data`).
 
 ## Flows as code
 
