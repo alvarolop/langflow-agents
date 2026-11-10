@@ -1,0 +1,16 @@
+# Secrets (NEVER commit)
+.env
+.env.local
+
+# Local data
+langflow-data/
+
+# Claude Code local settings
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Editor & OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
