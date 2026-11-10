@@ -1,0 +1,6 @@
+---
+description: Langflow agents project conventions
+alwaysApply: true
+---
+
+Follow the instructions in @AGENTS.md at the repo root.
