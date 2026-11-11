@@ -28,20 +28,29 @@ Ctrl+C on a foreground `up` does the same as `stop`. Avoid `down`: it removes th
 - Any `*.json` in `flows/` is loaded at startup.
 - To save a flow you built in the UI: flow menu → **Export** → save to `flows/`, then restart.
 
-## OpenShift
+## OpenShift (Argo CD)
 
-Uses the `langflow-ide` chart (backend + frontend, SQLite on a PVC). Installing it needs cluster-admin: the chart creates a ClusterRole so its ServiceAccount can use the `nonroot-v2` SCC.
+Dev instance (IDE) deployed as an Argo CD `Application` ([`deploy/openshift/application-langflow.yaml`](deploy/openshift/application-langflow.yaml)) that uses the official [`langflow-ide` Helm chart](https://docs.langflow.org/deployment-kubernetes-dev) (0.1.2, Langflow 1.13.1): backend with SQLite on a PVC plus frontend, with the values inline and `CreateNamespace=true` for the `langflow` namespace. It runs with the default `restricted-v2` SCC; no SCC changes and no cluster-scoped objects (the chart's ServiceAccount/ClusterRole are disabled). The chart's Ingress is turned into an edge-TLS Route by OpenShift.
 
+1. **Apply the Application** (`$CLUSTER_DOMAIN` is substituted with `envsubst`):
 ```bash
-helm repo add langflow https://langflow-ai.github.io/langflow-helm-charts && helm repo update
-oc new-project langflow-agents
-oc create secret generic langflow-agents-env --from-env-file=.env   # .env needs LANGFLOW_SECRET_KEY
-helm install langflow-agents langflow/langflow-ide -f deploy/openshift/values.yaml
-oc get svc                          # find the frontend service (port 8080)
-oc expose svc/<frontend-service>    # create the Route
+export CLUSTER_DOMAIN=$(oc get dns cluster -o jsonpath='{.spec.baseDomain}')
+envsubst < deploy/openshift/application-langflow.yaml | oc apply -f -
 ```
 
-> Untested on a cluster yet. The values render correctly with `helm template`. Flows in `flows/` are not auto-loaded here: import them from the UI.
+2. **Apply the Secret** with the credentials from your local `.env`. It is generated on the fly, so credentials never enter git or the Application:
+```bash
+oc create secret generic langflow-env --from-env-file=.env -n langflow \
+  --dry-run=client -o yaml | oc apply -f -
+```
+
+The `.env` needs `LANGFLOW_SECRET_KEY`. The backend shows `CreateContainerConfigError` until this Secret exists, then recovers by itself. After changing `.env`, re-apply it and run `oc rollout restart statefulset/langflow-service-backend -n langflow`.
+
+Langflow will be available at `https://langflow-langflow.apps.$CLUSTER_DOMAIN`.
+
+> The route is public and the IDE can run Python: set a strong `LANGFLOW_SUPERUSER_PASSWORD` in `.env` before applying the Secret (not `admin`). Flows in `flows/` are not auto-loaded here: import them from the UI.
+
+---
 
 ## License
 [MIT](LICENSE)

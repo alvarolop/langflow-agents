@@ -5,7 +5,7 @@ Langflow (official image) setup for building AI agents. Flows are versioned as J
 ## Layout
 - `flows/` — exported Langflow flow JSON (loaded at startup via `LANGFLOW_LOAD_FLOWS_PATH`)
 - `deploy/local/compose.yaml` — Podman/Docker Compose
-- `deploy/openshift/values.yaml` — Helm values (`langflow-ide` chart)
+- `deploy/openshift/application-langflow.yaml` — Argo CD Application (`langflow-ide` chart, values inline)
 - `.env.example` — env template; real `.env` is git-ignored
 
 ## Commands
