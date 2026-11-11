@@ -1,0 +1,111 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    app: langflow
+  name: langflow
+  namespace: openshift-gitops
+spec:
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: langflow
+  project: default
+  source:
+    # Official Langflow IDE chart (dev instance): https://docs.langflow.org/deployment-kubernetes-dev
+    repoURL: https://langflow-ai.github.io/langflow-helm-charts
+    targetRevision: "0.1.2"
+    chart: langflow-ide
+    helm:
+      values: |
+        # The chart does not pin the images (appVersion: latest). Same version as deploy/local/compose.yaml.
+        langflow:
+          backend:
+            image:
+              tag: "1.13.1"
+
+            # Backend = StatefulSet with SQLite on a PVC (default storage class). `env` replaces the chart's
+            # list, so its three defaults come first.
+            env:
+              - name: LANGFLOW_PORT
+                value: "7860"
+              - name: LANGFLOW_ALEMBIC_LOG_FILE
+                value: "/app/db/alembic.log"
+              - name: LANGFLOW_UPDATE_STARTER_PROJECTS
+                value: "false"
+              # Root filesystem is read-only and the UID is random: config goes to a writable volume, HOME to /tmp
+              - name: LANGFLOW_CONFIG_DIR
+                value: /app/data
+              - name: HOME
+                value: /tmp
+              - name: DO_NOT_TRACK
+                value: "true"
+              - name: LANGFLOW_AUTO_LOGIN
+                value: "false"
+              # Credentials come from the Secret langflow-env, never inline them here
+              - name: LANGFLOW_SUPERUSER
+                valueFrom:
+                  secretKeyRef:
+                    name: langflow-env
+                    key: LANGFLOW_SUPERUSER
+              - name: LANGFLOW_SUPERUSER_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: langflow-env
+                    key: LANGFLOW_SUPERUSER_PASSWORD
+              - name: LANGFLOW_SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: langflow-env
+                    key: LANGFLOW_SECRET_KEY
+              # Gemini key, exposed to flows as the global variable GOOGLE_API_KEY
+              - name: GOOGLE_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: langflow-env
+                    key: GEMINI_API_KEY
+              - name: LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT
+                value: GOOGLE_API_KEY
+
+            # Langflow takes minutes to start: the chart default (~35s) would restart it in a loop
+            probe:
+              initialDelaySeconds: 60
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 30
+
+          frontend:
+            image:
+              tag: "1.13.1"
+
+        # OpenShift: the restricted-v2 SCC assigns the UID/GID/fsGroup, so null the chart's hardcoded 1000.
+        # No ServiceAccount is created, so the chart's ClusterRole/ClusterRoleBinding (anyuid) are not rendered.
+        serviceAccount:
+          create: false
+        podSecurityContext:
+          runAsUser: null
+          runAsGroup: null
+          fsGroup: null
+        securityContext:
+          runAsUser: null
+          runAsGroup: null
+
+        # OpenShift turns this Ingress into an edge-TLS Route (UI: service langflow-service, port 8080)
+        ingress:
+          enabled: true
+          annotations:
+            route.openshift.io/termination: edge
+          hosts:
+            - host: "langflow-langflow.apps.$CLUSTER_DOMAIN"
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - hosts:
+                - "langflow-langflow.apps.$CLUSTER_DOMAIN"
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
