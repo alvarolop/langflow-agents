@@ -90,7 +90,9 @@ spec:
           runAsUser: null
           runAsGroup: null
 
-        # OpenShift turns this Ingress into an edge-TLS Route (UI: service langflow-service, port 8080)
+        # OpenShift turns this Ingress into an edge-TLS Route (UI: service langflow-service, port 8080).
+        # No `tls` block: the chart would render `secretName: null` and the controller then rejects the rule
+        # ("Invalid or missing TLS secret"). The edge annotation uses the router's default certificate.
         ingress:
           enabled: true
           annotations:
@@ -100,9 +102,6 @@ spec:
               paths:
                 - path: /
                   pathType: Prefix
-          tls:
-            - hosts:
-                - "langflow-langflow.apps.$CLUSTER_DOMAIN"
   syncPolicy:
     automated:
       prune: false
