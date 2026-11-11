@@ -44,7 +44,7 @@ oc create secret generic langflow-env --from-env-file=.env -n langflow \
   --dry-run=client -o yaml | oc apply -f -
 ```
 
-The `.env` needs `LANGFLOW_SECRET_KEY`. The backend shows `CreateContainerConfigError` until this Secret exists, then recovers by itself. After changing `.env`, re-apply it and run `oc rollout restart statefulset/langflow-service-backend -n langflow`.
+The `.env` needs `LANGFLOW_SECRET_KEY`. The backend shows `CreateContainerConfigError` until this Secret exists, then recovers by itself. After changing `.env`, re-apply it and run `oc rollout restart statefulset/langflow-service -n langflow`.
 
 Langflow will be available at `https://langflow-langflow.apps.$CLUSTER_DOMAIN`.
 
